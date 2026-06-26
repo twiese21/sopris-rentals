@@ -198,6 +198,23 @@
     .detail-approve { background:var(--approved); color:#fff; }
     .detail-decline { background:var(--declined); color:#fff; }
 
+
+    /* ── Day Timeline Modal ── */
+    .timeline-wrap { position:relative; padding:1rem 0; }
+    .timeline-hour { display:flex; align-items:flex-start; gap:1rem; min-height:48px; }
+    .timeline-label { width:64px; flex-shrink:0; font-size:.75rem; font-weight:600; color:var(--gray); padding-top:.25rem; text-align:right; }
+    .timeline-track { flex:1; border-left:2px solid var(--border); padding-left:1rem; padding-bottom:.5rem; min-height:48px; position:relative; }
+    .timeline-track.has-event { border-left-color:var(--blue); }
+    .timeline-event { background:linear-gradient(135deg,var(--blue),var(--purple)); color:#fff; border-radius:10px; padding:.6rem 1rem; margin-bottom:.35rem; }
+    .timeline-event.approved { background:linear-gradient(135deg,#16A34A,#15803D); }
+    .timeline-event.pending  { background:linear-gradient(135deg,#F59E0B,#D97706); }
+    .timeline-event.declined { background:linear-gradient(135deg,#DC2626,#B91C1C); }
+    .timeline-event.manual   { background:linear-gradient(135deg,#8B5CF6,#7C3AED); }
+    .timeline-event-name  { font-weight:700; font-size:.88rem; }
+    .timeline-event-detail{ font-size:.75rem; opacity:.85; margin-top:.2rem; }
+    .timeline-empty { font-size:.85rem; color:var(--gray); padding:2rem; text-align:center; }
+    .day-modal-date { font-family:'Playfair Display',serif; font-size:1.4rem; margin-bottom:.25rem; }
+    .day-modal-sub  { font-size:.85rem; color:var(--gray); margin-bottom:1.5rem; }
     @media (max-width:768px) {
       .finance-grid { grid-template-columns:1fr; }
       .finance-summary { grid-template-columns:1fr 1fr; }
@@ -336,9 +353,77 @@
     document.getElementById('cal-cells').innerHTML=html;
   }
 
+  let currentDayStr = '';
   window.calDayClick = ds => {
-    const dayBooks=allBookings.filter(b=>b.date===ds);
-    if(dayBooks.length>0) openDetailModal(dayBooks[0]); else openBlockModal(ds);
+    currentDayStr = ds;
+    openDayModal(ds);
+  };
+
+  window.openDayModal = function(ds) {
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const [y,m,d] = ds.split('-');
+    const dayBooks = allBookings.filter(b => b.date === ds);
+    const isBlocked = blockedDates.some(b => b.date === ds);
+
+    document.getElementById('day-modal-date').textContent = `${months[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
+    document.getElementById('day-modal-sub').textContent =
+      isBlocked ? 'This day is blocked.' :
+      dayBooks.length === 0 ? 'No bookings — click a slot or use the buttons below.' :
+      `${dayBooks.length} booking${dayBooks.length>1?'s':''} scheduled`;
+
+    // Build 9am–8pm timeline
+    const hours = [];
+    for(let h=9; h<=20; h++) {
+      const label = h === 12 ? '12:00 PM' : h < 12 ? `${h}:00 AM` : `${h-12}:00 PM`;
+      const halfLabel = h === 12 ? '12:30 PM' : h < 12 ? `${h}:30 AM` : `${h-12}:30 PM`;
+      hours.push({h, label, halfLabel});
+    }
+
+    function timeToH(t) {
+      if(!t) return null;
+      const [time, ampm] = t.split(' ');
+      let [hh, mm] = time.split(':').map(Number);
+      if(ampm === 'PM' && hh !== 12) hh += 12;
+      if(ampm === 'AM' && hh === 12) hh = 0;
+      return hh + mm/60;
+    }
+
+    let html = '';
+    hours.forEach(({h, label}) => {
+      // Find bookings that start at or span this hour
+      const events = dayBooks.filter(b => {
+        const start = timeToH(b.startTime);
+        if(start === null) return false;
+        const end = start + (b.hours || 4);
+        return Math.floor(start) === h;
+      });
+
+      let evHtml = events.map(b => {
+        const endH = timeToH(b.startTime) + (b.hours || 4);
+        const endLabel = endH >= 12 ?
+          (endH === 12 ? '12:00 PM' : `${Math.floor(endH)-12}:${((endH%1)*60||0).toString().padStart(2,'0')} PM`) :
+          `${Math.floor(endH)}:${((endH%1)*60||0).toString().padStart(2,'0')} AM`;
+        return `<div class="timeline-event ${b.status}" onclick='openDetailModal(${JSON.stringify(b).replace(/'/g,"&#39;")})' style="cursor:pointer">
+          <div class="timeline-event-name">${b.firstName} ${b.lastName}</div>
+          <div class="timeline-event-detail">${b.house} &nbsp;·&nbsp; ${b.startTime} – ${endLabel} &nbsp;·&nbsp; $${b.totalPrice || '—'}</div>
+        </div>`;
+      }).join('');
+
+      html += `<div class="timeline-hour">
+        <div class="timeline-label">${label}</div>
+        <div class="timeline-track ${events.length ? 'has-event' : ''}">${evHtml}</div>
+      </div>`;
+    });
+
+    if(dayBooks.length === 0) html += `<div class="timeline-empty">No bookings on this day.</div>`;
+    document.getElementById('day-timeline').innerHTML = html;
+    document.getElementById('day-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeDayModal = function() {
+    document.getElementById('day-modal').classList.remove('open');
+    document.body.style.overflow = '';
   };
 
   // Bookings table
@@ -390,9 +475,28 @@
   // Add booking modal
   window.openAddModal  = () => { document.getElementById('add-modal').classList.add('open'); document.body.style.overflow='hidden'; };
   window.closeAddModal = () => { document.getElementById('add-modal').classList.remove('open'); document.body.style.overflow=''; document.getElementById('add-form').reset(); };
+  window.adminUpdateDuration = function() {
+    const dur = document.getElementById('a-duration').value;
+    const cg = document.getElementById('a-custom-hrs-group');
+    const pd = document.getElementById('a-price-display');
+    cg.style.display = dur === 'custom' ? 'block' : 'none';
+    pd.style.display = dur ? 'block' : 'none';
+    if(dur === '4hr')    pd.textContent = 'Total: $250 — 4 Hours';
+    if(dur === 'allday') pd.textContent = 'Total: $400 — All Day (8 Hours)';
+    if(dur === 'custom') adminUpdatePrice();
+  };
+  window.adminUpdatePrice = function() {
+    const h = parseInt(document.getElementById('a-hours').value)||1;
+    document.getElementById('a-price-display').textContent = `Total: $${h*100} — ${h} Hour${h>1?'s':''}`;
+  };
+
   window.submitAddBooking = async e => {
     e.preventDefault();
-    const data={firstName:document.getElementById('a-fname').value,lastName:document.getElementById('a-lname').value,email:document.getElementById('a-email').value,phone:document.getElementById('a-phone').value,house:document.getElementById('a-house').value,date:document.getElementById('a-date').value,duration:document.getElementById('a-duration').value,address:document.getElementById('a-address').value,notes:document.getElementById('a-notes').value,status:'manual',createdAt:serverTimestamp()};
+    const durVal = document.getElementById('a-duration').value;
+    const hours = durVal==='custom' ? parseInt(document.getElementById('a-hours').value) : durVal==='allday' ? 8 : 4;
+    const price = durVal==='allday' ? 400 : durVal==='4hr' ? 250 : hours*100;
+    const durLabel = durVal==='allday' ? 'All Day (8 hrs)' : durVal==='4hr' ? '4 Hours' : `${hours} Hours (Custom)`;
+    const data={firstName:document.getElementById('a-fname').value,lastName:document.getElementById('a-lname').value,email:document.getElementById('a-email').value,phone:document.getElementById('a-phone').value,house:document.getElementById('a-house').value,date:document.getElementById('a-date').value,startTime:document.getElementById('a-start').value,duration:durLabel,hours:hours,totalPrice:price,address:document.getElementById('a-address').value,notes:document.getElementById('a-notes').value,status:'manual',createdAt:serverTimestamp()};
     const ref=await addDoc(collection(db,"bookings"),data);
     allBookings.unshift({id:ref.id,...data});
     renderBookingStats(); renderCalendar(); renderTable(); renderFinance();
@@ -607,7 +711,7 @@
   };
 
   document.addEventListener('keydown', e => {
-    if(e.key==='Escape'){ closeAddModal(); closeBlockModal(); closeDetailModal(); }
+    if(e.key==='Escape'){ closeAddModal(); closeBlockModal(); closeDetailModal(); closeDayModal(); }
   });
 </script>
 
@@ -804,14 +908,48 @@
       <div class="form-row">
         <div class="fg"><label>Event Date *</label><input type="date" id="a-date" required /></div>
         <div class="fg">
-          <label>Duration</label>
-          <select id="a-duration">
-            <option>4 Hours — $250</option>
-            <option>All Day (8 hrs) — $400</option>
-            <option>Custom (hourly) — $100/hr</option>
+          <label>Duration *</label>
+          <select id="a-duration" onchange="adminUpdateDuration()" required>
+            <option value="">Select...</option>
+            <option value="4hr">4 Hours — $250</option>
+            <option value="allday">All Day (8 hrs) — $400</option>
+            <option value="custom">Custom — $100/hr</option>
           </select>
         </div>
       </div>
+      <div class="form-row">
+        <div class="fg">
+          <label>Start Time *</label>
+          <select id="a-start" required>
+            <option value="">Select start time...</option>
+            <option>9:00 AM</option><option>9:30 AM</option>
+            <option>10:00 AM</option><option>10:30 AM</option>
+            <option>11:00 AM</option><option>11:30 AM</option>
+            <option>12:00 PM</option><option>12:30 PM</option>
+            <option>1:00 PM</option><option>1:30 PM</option>
+            <option>2:00 PM</option><option>2:30 PM</option>
+            <option>3:00 PM</option><option>3:30 PM</option>
+            <option>4:00 PM</option><option>4:30 PM</option>
+            <option>5:00 PM</option><option>5:30 PM</option>
+            <option>6:00 PM</option><option>6:30 PM</option>
+            <option>7:00 PM</option><option>7:30 PM</option>
+            <option>8:00 PM</option>
+          </select>
+        </div>
+        <div class="fg" id="a-custom-hrs-group" style="display:none">
+          <label>Number of Hours</label>
+          <select id="a-hours" onchange="adminUpdatePrice()">
+            <option value="1">1 hour — $100</option>
+            <option value="2">2 hours — $200</option>
+            <option value="3">3 hours — $300</option>
+            <option value="4">4 hours — $400</option>
+            <option value="5">5 hours — $500</option>
+            <option value="6">6 hours — $600</option>
+            <option value="7">7 hours — $700</option>
+          </select>
+        </div>
+      </div>
+      <div id="a-price-display" style="display:none;background:var(--bg);border-radius:10px;padding:.6rem 1rem;font-size:.88rem;font-weight:600;color:var(--blue);margin-bottom:.25rem;"></div>
       <div class="fg"><label>Event Address *</label><input type="text" id="a-address" required /></div>
       <div class="fg"><label>Notes</label><textarea id="a-notes"></textarea></div>
       <button type="submit" class="modal-submit">Save Booking</button>
@@ -851,6 +989,20 @@
     <div class="detail-actions">
       <button class="detail-approve" id="d-approve-btn">Approve</button>
       <button class="detail-decline" id="d-decline-btn">Decline</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Day Timeline -->
+<div class="modal-overlay" id="day-modal" onclick="if(event.target===this)closeDayModal()">
+  <div class="modal-box" style="max-width:600px">
+    <button class="modal-close-btn" onclick="closeDayModal()">x</button>
+    <div class="day-modal-date" id="day-modal-date"></div>
+    <div class="day-modal-sub" id="day-modal-sub"></div>
+    <div class="timeline-wrap" id="day-timeline"></div>
+    <div style="margin-top:1.25rem;display:flex;gap:.75rem">
+      <button class="btn-action purple" onclick="closeDayModal();openAddModal()">+ Add Booking</button>
+      <button class="btn-action" onclick="closeDayModal();openBlockModal(currentDayStr)">Block This Day</button>
     </div>
   </div>
 </div>

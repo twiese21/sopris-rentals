@@ -452,18 +452,68 @@
  </div>
  <div class="form-row">
  <div class="form-group">
- <label for="b-date">Event Date *</label>
- <input type="date" id="b-date" required />
- <span id="date-warning" style="display:none;font-size:.78rem;color:var(--red);margin-top:.25rem;"> This date is unavailable. Please choose another.</span>
+   <label for="b-date">Event Date *</label>
+   <input type="date" id="b-date" required />
+   <span id="date-warning" style="display:none;font-size:.78rem;color:var(--red);margin-top:.25rem;">This date is unavailable. Please choose another.</span>
  </div>
  <div class="form-group">
- <label for="b-duration">Rental Duration</label>
- <select id="b-duration">
- <option value="4 Hours — $250">4 Hours — $250</option>
- <option value="All Day (8 hrs) — $400">All Day (8 hrs) — $400</option>
- <option value="Custom (hourly) — $100/hr">Custom (hourly) — $100/hr</option>
- </select>
+   <label for="b-duration">Rental Duration *</label>
+   <select id="b-duration" onchange="updateBookingFields()" required>
+     <option value="">Select duration...</option>
+     <option value="4hr">4 Hours — $250</option>
+     <option value="allday">All Day (8 hrs) — $400</option>
+     <option value="custom">Custom — $100/hr</option>
+   </select>
  </div>
+ </div>
+ <!-- Start time row — shown for all options -->
+ <div class="form-row" id="time-row" style="display:none">
+   <div class="form-group">
+     <label for="b-start">Start Time *</label>
+     <select id="b-start" required>
+       <option value="">Select start time...</option>
+       <option value="9:00 AM">9:00 AM</option>
+       <option value="9:30 AM">9:30 AM</option>
+       <option value="10:00 AM">10:00 AM</option>
+       <option value="10:30 AM">10:30 AM</option>
+       <option value="11:00 AM">11:00 AM</option>
+       <option value="11:30 AM">11:30 AM</option>
+       <option value="12:00 PM">12:00 PM</option>
+       <option value="12:30 PM">12:30 PM</option>
+       <option value="1:00 PM">1:00 PM</option>
+       <option value="1:30 PM">1:30 PM</option>
+       <option value="2:00 PM">2:00 PM</option>
+       <option value="2:30 PM">2:30 PM</option>
+       <option value="3:00 PM">3:00 PM</option>
+       <option value="3:30 PM">3:30 PM</option>
+       <option value="4:00 PM">4:00 PM</option>
+       <option value="4:30 PM">4:30 PM</option>
+       <option value="5:00 PM">5:00 PM</option>
+       <option value="5:30 PM">5:30 PM</option>
+       <option value="6:00 PM">6:00 PM</option>
+       <option value="6:30 PM">6:30 PM</option>
+       <option value="7:00 PM">7:00 PM</option>
+       <option value="7:30 PM">7:30 PM</option>
+       <option value="8:00 PM">8:00 PM</option>
+     </select>
+   </div>
+   <!-- Custom hours field — only shown for custom duration -->
+   <div class="form-group" id="custom-hours-group" style="display:none">
+     <label for="b-hours">Number of Hours *</label>
+     <select id="b-hours" onchange="updateCustomPrice()">
+       <option value="1">1 hour — $100</option>
+       <option value="2">2 hours — $200</option>
+       <option value="3">3 hours — $300</option>
+       <option value="4">4 hours — $400</option>
+       <option value="5">5 hours — $500</option>
+       <option value="6">6 hours — $600</option>
+       <option value="7">7 hours — $700</option>
+     </select>
+   </div>
+ </div>
+ <!-- Price summary -->
+ <div id="price-summary" style="display:none;background:var(--cream-d);border-radius:10px;padding:.75rem 1rem;font-size:.9rem;font-weight:600;color:var(--meadow);">
+   Total: <span id="price-display"></span>
  </div>
  <div class="form-group"><label for="b-address">Event Address *</label><input type="text" id="b-address" placeholder="123 Meadow Lane, Carbondale, CO" required /></div>
  <div class="form-group"><label for="b-notes">Additional Notes</label><textarea id="b-notes" placeholder="Number of kids, ages, any setup notes…"></textarea></div>
@@ -534,16 +584,23 @@
  const btn = document.getElementById('booking-submit-btn');
  btn.disabled = true;
  btn.textContent = 'Sending…';
+ const durVal = document.getElementById('b-duration').value;
+ const hours = durVal === 'custom' ? parseInt(document.getElementById('b-hours').value) : durVal === 'allday' ? 8 : 4;
+ const price = durVal === 'allday' ? 400 : durVal === '4hr' ? 250 : hours * 100;
+ const durLabel = durVal === 'allday' ? 'All Day (8 hrs)' : durVal === '4hr' ? '4 Hours' : `${hours} Hours (Custom)`;
  const data = {
- firstName: document.getElementById('b-fname').value,
- lastName: document.getElementById('b-lname').value,
- email: document.getElementById('b-email').value,
- phone: document.getElementById('b-phone').value,
- house: document.getElementById('b-house').value,
- date: document.getElementById('b-date').value,
- duration: document.getElementById('b-duration').value,
- address: document.getElementById('b-address').value,
- notes: document.getElementById('b-notes').value,
+   firstName: document.getElementById('b-fname').value,
+   lastName:  document.getElementById('b-lname').value,
+   email:     document.getElementById('b-email').value,
+   phone:     document.getElementById('b-phone').value,
+   house:     document.getElementById('b-house').value,
+   date:      document.getElementById('b-date').value,
+   startTime: document.getElementById('b-start').value,
+   duration:  durLabel,
+   hours:     hours,
+   totalPrice: price,
+   address:   document.getElementById('b-address').value,
+   notes:     document.getElementById('b-notes').value,
  };
  try {
  if (window.submitBookingToFirebase) {
@@ -577,6 +634,37 @@
  document.getElementById('contact-success').style.display = 'block';
  e.target.reset();
  setTimeout(() => { document.getElementById('contact-success').style.display = 'none'; }, 6000);
+ }
+
+ // Booking form dynamic fields
+ function updateBookingFields() {
+   const dur = document.getElementById('b-duration').value;
+   const timeRow = document.getElementById('time-row');
+   const customHrs = document.getElementById('custom-hours-group');
+   const priceSummary = document.getElementById('price-summary');
+   const priceDisplay = document.getElementById('price-display');
+
+   if (!dur) {
+     timeRow.style.display = 'none';
+     priceSummary.style.display = 'none';
+     return;
+   }
+   timeRow.style.display = 'grid';
+   priceSummary.style.display = 'block';
+
+   if (dur === 'custom') {
+     customHrs.style.display = 'block';
+     updateCustomPrice();
+   } else {
+     customHrs.style.display = 'none';
+     if (dur === '4hr')    priceDisplay.textContent = '$250 — 4 Hours';
+     if (dur === 'allday') priceDisplay.textContent = '$400 — All Day (8 Hours)';
+   }
+ }
+
+ function updateCustomPrice() {
+   const hrs = parseInt(document.getElementById('b-hours').value) || 1;
+   document.getElementById('price-display').textContent = `$${hrs * 100} — ${hrs} Hour${hrs>1?'s':''}`;
  }
 </script>
 </body>
