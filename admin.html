@@ -240,6 +240,7 @@
 <!-- ════════════════════════════════════
      FIREBASE CONFIG — paste your values
      ════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
@@ -257,6 +258,14 @@
     appId:             "1:901315229389:web:c86a72026a3dac024f1b84",
     measurementId:     "G-PNJ8B02H1K"
   };
+
+  // ── EmailJS Config ─────────────────────────────
+  const EJS_SERVICE = "service_j1iiuz4";
+  const EJS_STATUS  = "template_u1fybbp";  // customer approved/declined email
+  const EJS_KEY     = "_5MGevXDzKCGomFlP";
+  // ─────────────────────────────────────────────
+
+  emailjs.init(EJS_KEY);
 
   const app  = initializeApp(firebaseConfig);
   const auth = getAuth(app);
@@ -525,9 +534,33 @@
     return `${'Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec'.split(',')[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
   }
 
-  window.updateStatus = async (id,status) => {
-    await updateDoc(doc(db,"bookings",id),{status});
-    const b=allBookings.find(b=>b.id===id); if(b) b.status=status;
+  window.updateStatus = async (id, status) => {
+    await updateDoc(doc(db,"bookings",id), {status});
+    const b = allBookings.find(b => b.id === id);
+    if(b) {
+      b.status = status;
+      // Send status email to customer
+      try {
+        const statusMessage = status === 'approved'
+          ? "Great news! Your booking has been approved. We look forward to seeing you at your event! We will be in touch closer to the date to confirm delivery details."
+          : "Unfortunately we are unable to accommodate your booking request for this date. Please contact us at taylor@soprispartyrentals.com and we will do our best to find an alternative date that works for you.";
+        await emailjs.send(EJS_SERVICE, EJS_STATUS, {
+          customer_name:  b.firstName,
+          customer_email: b.email,
+          status:         status,
+          status_message: statusMessage,
+          bounce_house:   b.house,
+          event_date:     b.date,
+          start_time:     b.startTime  || "",
+          duration:       b.duration   || "",
+          total_price:    b.totalPrice ? "$" + b.totalPrice : "TBD",
+          event_address:  b.address    || ""
+        });
+        console.log("Status email sent to", b.email);
+      } catch(err) {
+        console.warn("EmailJS status email failed:", err);
+      }
+    }
     renderBookingStats(); renderCalendar(); renderTable(); renderFinance();
     if(document.getElementById('detail-modal').classList.contains('open')) closeDetailModal();
   };

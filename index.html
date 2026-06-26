@@ -190,9 +190,7 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════
- CONFIGURATION — SWAP THESE VALUES TOMORROW
- ═══════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, collection, addDoc, getDocs, serverTimestamp }
@@ -208,14 +206,20 @@
     measurementId:     "G-PNJ8B02H1K"
   };
 
-  const EMAILJS_SERVICE_ID          = "PASTE_YOUR_EMAILJS_SERVICE_ID_HERE";
-  const EMAILJS_TEMPLATE_ID         = "PASTE_YOUR_EMAILJS_TEMPLATE_ID_HERE";
-  const EMAILJS_CONFIRM_TEMPLATE_ID = "PASTE_YOUR_EMAILJS_CONFIRM_TEMPLATE_ID_HERE";
-  const EMAILJS_PUBLIC_KEY          = "PASTE_YOUR_EMAILJS_PUBLIC_KEY_HERE";
+  // ── EmailJS Config ─────────────────────────────────
+  const EJS_SERVICE  = "service_j1iiuz4";
+  const EJS_CONTACT  = "template_pysee28";  // owner notified of contact form
+  const EJS_BOOKING  = "template_xcexl7v";  // owner notified of new booking
+  const EJS_PENDING  = "template_h5kr83m";  // customer confirmation (pending)
+  const EJS_KEY      = "_5MGevXDzKCGomFlP";
+  // ──────────────────────────────────────────────────
+
+  emailjs.init(EJS_KEY);
 
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
+  // Load blocked dates for date picker
   async function loadBlockedDates() {
     try {
       const snap = await getDocs(collection(db, "blocked_dates"));
@@ -226,29 +230,64 @@
   }
   loadBlockedDates();
 
+  // Submit booking → Firestore + 2 emails
   window.submitBookingToFirebase = async function(data) {
+    // Save to Firestore
     const docRef = await addDoc(collection(db, "bookings"), {
       ...data, status: "pending", createdAt: serverTimestamp()
     });
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      customer_name: data.firstName + " " + data.lastName,
-      customer_email: data.email, customer_phone: data.phone,
-      bounce_house: data.house, event_date: data.date,
-      rental_duration: data.duration, event_address: data.address,
-      notes: data.notes || "None", booking_id: docRef.id
-    }, EMAILJS_PUBLIC_KEY);
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_CONFIRM_TEMPLATE_ID, {
-      customer_name: data.firstName, customer_email: data.email,
-      bounce_house: data.house, event_date: data.date, booking_id: docRef.id
-    }, EMAILJS_PUBLIC_KEY);
+
+    const customerName = data.firstName + " " + data.lastName;
+
+    // Email 1 — Notify owner of new booking
+    await emailjs.send(EJS_SERVICE, EJS_BOOKING, {
+      customer_name:  customerName,
+      customer_email: data.email,
+      customer_phone: data.phone,
+      bounce_house:   data.house,
+      event_date:     data.date,
+      start_time:     data.startTime,
+      duration:       data.duration,
+      total_price:    "$" + data.totalPrice,
+      event_address:  data.address,
+      notes:          data.notes || "None",
+      booking_id:     docRef.id
+    });
+
+    // Email 2 — Send customer a pending confirmation
+    await emailjs.send(EJS_SERVICE, EJS_PENDING, {
+      customer_name:  data.firstName,
+      customer_email: data.email,
+      bounce_house:   data.house,
+      event_date:     data.date,
+      start_time:     data.startTime,
+      duration:       data.duration,
+      total_price:    "$" + data.totalPrice,
+      event_address:  data.address
+    });
+
     return docRef.id;
   };
 
+  // Submit contact form → Firestore + email to owner
   window.submitContactToFirebase = async function(data) {
+    // Save to Firestore
     await addDoc(collection(db, "messages"), { ...data, createdAt: serverTimestamp() });
+
+    // Email owner
+    await emailjs.send(EJS_SERVICE, EJS_CONTACT, {
+      customer_name:  data.name,
+      customer_email: data.email,
+      customer_phone: data.phone || "Not provided",
+      subject:        data.subject || "General Inquiry",
+      message:        data.message
+    });
   };
+
+  // Expose EmailJS config for admin to use for status emails
+  window.EJS_SERVICE = EJS_SERVICE;
+  window.EJS_KEY     = EJS_KEY;
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <!-- Nav -->
 <nav id="main-nav">
