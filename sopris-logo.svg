@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 160" width="480" height="160">
+  <defs>
+    <linearGradient id="mountGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A5F9A"/>
+      <stop offset="100%" style="stop-color:#2A7BBF"/>
+    </linearGradient>
+    <linearGradient id="peakGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.95"/>
+      <stop offset="100%" style="stop-color:#DBEAFE;stop-opacity:0.6"/>
+    </linearGradient>
+    <linearGradient id="iconBg" x1="135deg" x2="135deg" y1="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A5F9A"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+    <clipPath id="iconClip">
+      <rect x="0" y="0" width="130" height="160" rx="0"/>
+    </clipPath>
+  </defs>
+
+  <!-- ── Icon Block ── -->
+  <!-- Background pill/square -->
+  <rect x="8" y="16" width="118" height="128" rx="22" fill="url(#mountGrad)"/>
+
+  <!-- Mountain silhouette — Mount Sopris double peak -->
+  <!-- Back range (lighter) -->
+  <path d="M18,120 L42,72 L58,90 L75,55 L92,88 L108,70 L126,120 Z"
+        fill="rgba(255,255,255,0.15)"/>
+  <!-- Main Sopris double peak (white) -->
+  <path d="M22,124 L50,68 L63,84 L75,44 L87,84 L100,66 L124,124 Z"
+        fill="url(#peakGrad)"/>
+  <!-- Snow caps -->
+  <path d="M75,44 L65,72 L75,66 L85,72 Z" fill="white" opacity="0.95"/>
+
+  <!-- Color stripe at bottom of icon -->
+  <rect x="8" y="130" width="23.6" height="14" rx="0" fill="#2A7BBF"/>
+  <rect x="31.6" y="130" width="23.6" height="14" fill="#8B5CF6"/>
+  <rect x="55.2" y="130" width="23.6" height="14" fill="#F59E0B"/>
+  <rect x="78.8" y="130" width="23.6" height="14" fill="#16A34A"/>
+  <rect x="102.4" y="130" width="23.6" height="14" rx="0" fill="#DC2626"/>
+  <!-- Round bottom corners of stripe to match card -->
+  <rect x="8" y="130" width="118" height="14" rx="0" fill="none"/>
+  <path d="M8,130 L126,130 L126,144 Q126,144 118,144 L16,144 Q8,144 8,144 Z" fill="none"/>
+  <!-- Actually clip stripe to rounded bottom -->
+  <clipPath id="stripeClip">
+    <rect x="8" y="16" width="118" height="128" rx="22"/>
+  </clipPath>
+  <g clip-path="url(#stripeClip)">
+    <rect x="8"     y="130" width="23.6" height="18" fill="#2A7BBF"/>
+    <rect x="31.6"  y="130" width="23.6" height="18" fill="#8B5CF6"/>
+    <rect x="55.2"  y="130" width="23.6" height="18" fill="#F59E0B"/>
+    <rect x="78.8"  y="130" width="23.6" height="18" fill="#16A34A"/>
+    <rect x="102.4" y="130" width="23.6" height="18" fill="#DC2626"/>
+  </g>
+
+  <!-- ── Wordmark ── -->
+  <!-- SOPRIS -->
+  <text x="148" y="72"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="46"
+        font-weight="700"
+        letter-spacing="2"
+        fill="#1E2A3A">SOPRIS</text>
+
+  <!-- Thin divider line -->
+  <line x1="148" y1="84" x2="468" y2="84" stroke="#DBEAFE" stroke-width="1.5"/>
+
+  <!-- RENTALS & EVENTS -->
+  <text x="149" y="106"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="18"
+        font-weight="400"
+        letter-spacing="6"
+        fill="#2A7BBF">RENTALS &amp; EVENTS</text>
+
+  <!-- Tagline -->
+  <text x="150" y="130"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="11"
+        font-weight="400"
+        letter-spacing="2.5"
+        fill="#8B5CF6">ROARING FORK VALLEY, COLORADO</text>
+</svg>

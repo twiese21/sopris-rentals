@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>Admin — Sopris Rentals & Events</title>
+ <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+ <style>
+ *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ :root {
+ --blue: #2A7BBF;
+ --blue-d: #1A5F9A;
+ --purple: #8B5CF6;
+ --gold: #F59E0B;
+ --green: #16A34A;
+ --red: #DC2626;
+ --bg: #F0F6FF;
+ --surface: #FFFFFF;
+ --border: #DBEAFE;
+ --charcoal: #1E2A3A;
+ --gray: #64748B;
+ --pending: #F59E0B;
+ --approved: #16A34A;
+ --declined: #DC2626;
+ --blocked: #6B7280;
+ }
+ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--charcoal); min-height: 100vh; }
+
+ /* ── Admin Shell ── */
+ #admin-shell { display: block; }
+
+ /* Topbar */
+ .topbar {
+ background: var(--surface); border-bottom: 1px solid var(--border);
+ display: flex; align-items: center; justify-content: space-between;
+ padding: 0 2rem; height: 60px; position: sticky; top: 0; z-index: 50;
+ }
+ .topbar-brand { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--blue); }
+ .topbar-brand span { color: var(--purple); }
+ .topbar-right { display: flex; align-items: center; gap: 1rem; }
+ .topbar-user { font-size: .85rem; color: var(--gray); }
+ .btn-logout { background: none; border: 1.5px solid var(--border); border-radius: 100px; padding: .35rem 1rem; font-size: .82rem; font-weight: 600; color: var(--gray); cursor: pointer; transition: border-color .2s, color .2s; }
+ .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+ /* Main layout */
+ .admin-main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+ /* Stat cards */
+ .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+ .stat-card { background: var(--surface); border-radius: 14px; padding: 1.25rem 1.5rem; border: 1px solid var(--border); }
+ .stat-card-num { font-size: 2rem; font-weight: 700; margin-bottom: .2rem; }
+ .stat-card-lbl { font-size: .8rem; color: var(--gray); text-transform: uppercase; letter-spacing: .08em; }
+ .stat-card-num.pending { color: var(--pending); }
+ .stat-card-num.approved { color: var(--approved); }
+ .stat-card-num.declined { color: var(--declined); }
+ .stat-card-num.total { color: var(--blue); }
+
+ /* Section headers */
+ .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+ .section-header h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; }
+ .btn-action { background: var(--blue); color: #fff; border: none; border-radius: 100px; padding: .5rem 1.25rem; font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+ .btn-action:hover { background: var(--blue-d); }
+ .btn-action.purple { background: var(--purple); }
+ .btn-action.purple:hover { background: #7C3AED; }
+
+ /* Calendar */
+ .calendar-wrap { background: var(--surface); border-radius: 14px; border: 1px solid var(--border); padding: 1.5rem; margin-bottom: 2rem; }
+ .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+ .cal-nav h3 { font-family: 'Playfair Display', serif; font-size: 1.2rem; }
+ .cal-nav button { background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: .35rem .75rem; cursor: pointer; font-size: 1rem; transition: border-color .2s; }
+ .cal-nav button:hover { border-color: var(--blue); }
+ .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+ .cal-day-label { text-align: center; font-size: .72rem; font-weight: 700; color: var(--gray); text-transform: uppercase; padding: .35rem 0; }
+ .cal-cell {
+ min-height: 72px; border-radius: 10px; padding: .4rem .45rem;
+ border: 1.5px solid transparent; cursor: pointer;
+ transition: border-color .15s, background .15s;
+ position: relative; background: var(--bg);
+ }
+ .cal-cell:hover { border-color: var(--blue); }
+ .cal-cell.other-month { opacity: .35; pointer-events: none; }
+ .cal-cell.today { border-color: var(--blue) !important; background: rgba(42,123,191,.08); }
+ .cal-cell.blocked { background: #fee2e2; border-color: #fca5a5; }
+ .cal-cell.has-bookings { background: rgba(22,163,74,.07); }
+ .cal-date { font-size: .78rem; font-weight: 700; color: var(--charcoal); margin-bottom: .3rem; }
+ .cal-pip { font-size: .65rem; padding: .1rem .4rem; border-radius: 100px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; font-weight: 600; }
+ .cal-pip.pending { background: #fef3c7; color: #92400e; }
+ .cal-pip.approved { background: #d1fae5; color: #065f46; }
+ .cal-pip.declined { background: #fee2e2; color: #991b1b; }
+ .cal-blocked-label { font-size: .65rem; color: var(--blocked); font-weight: 600; }
+ .cal-legend { display: flex; gap: 1.25rem; margin-top: 1rem; flex-wrap: wrap; }
+ .legend-item { display: flex; align-items: center; gap: .4rem; font-size: .78rem; color: var(--gray); }
+ .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+ /* Bookings table */
+ .table-wrap { background: var(--surface); border-radius: 14px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 2rem; }
+ .table-filters { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+ .filter-btn { background: var(--bg); border: 1.5px solid var(--border); border-radius: 100px; padding: .35rem .9rem; font-size: .8rem; font-weight: 600; cursor: pointer; transition: all .2s; color: var(--charcoal); }
+ .filter-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+ .filter-btn.pending.active { background: var(--pending); border-color: var(--pending); }
+ .filter-btn.approved.active { background: var(--approved); border-color: var(--approved); }
+ .filter-btn.declined.active { background: var(--declined); border-color: var(--declined); }
+ table { width: 100%; border-collapse: collapse; }
+ thead th { background: var(--bg); padding: .75rem 1rem; text-align: left; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--gray); border-bottom: 1px solid var(--border); }
+ tbody td { padding: .85rem 1rem; font-size: .88rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+ tbody tr:last-child td { border-bottom: none; }
+ tbody tr:hover { background: var(--bg); }
+ .status-badge { display: inline-block; padding: .25rem .75rem; border-radius: 100px; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+ .status-badge.pending { background: #fef3c7; color: #92400e; }
+ .status-badge.approved { background: #d1fae5; color: #065f46; }
+ .status-badge.declined { background: #fee2e2; color: #991b1b; }
+ .status-badge.manual { background: #ede9fe; color: #4c1d95; }
+ .row-actions { display: flex; gap: .5rem; }
+ .row-btn { border: none; border-radius: 8px; padding: .3rem .75rem; font-size: .78rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
+ .row-btn:hover { opacity: .8; }
+ .row-btn.approve { background: #d1fae5; color: #065f46; }
+ .row-btn.decline { background: #fee2e2; color: #991b1b; }
+ .row-btn.delete { background: var(--bg); color: var(--gray); border: 1.5px solid var(--border); }
+ .empty-state { text-align: center; padding: 3rem; color: var(--gray); }
+ .empty-state div { font-size: 2.5rem; margin-bottom: .75rem; }
+
+ /* Modals */
+ .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(30,42,58,.5); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1rem; }
+ .modal-overlay.open { display: flex; }
+ .modal-box { background: var(--surface); border-radius: 20px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; padding: 2rem; position: relative; box-shadow: 0 24px 80px rgba(30,42,58,.2); }
+ .modal-box h3 { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin-bottom: .35rem; }
+ .modal-box p.modal-desc { font-size: .88rem; color: var(--gray); margin-bottom: 1.5rem; }
+ .modal-close-btn { position: absolute; top: 1rem; right: 1rem; background: var(--bg); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
+ .modal-form { display: flex; flex-direction: column; gap: .85rem; }
+ .modal-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
+ .modal-form .fg { display: flex; flex-direction: column; gap: .3rem; }
+ .modal-form label { font-size: .8rem; font-weight: 600; }
+ .modal-form input, .modal-form select, .modal-form textarea { padding: .65rem .9rem; border: 1.5px solid var(--border); border-radius: 10px; font-size: .9rem; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--charcoal); outline: none; transition: border-color .2s; }
+ .modal-form input:focus, .modal-form select:focus, .modal-form textarea:focus { border-color: var(--blue); }
+ .modal-form textarea { resize: vertical; min-height: 80px; }
+ .modal-submit { background: var(--blue); color: #fff; border: none; border-radius: 100px; padding: .8rem; font-size: .95rem; font-weight: 700; cursor: pointer; width: 100%; margin-top: .5rem; transition: background .2s; }
+ .modal-submit:hover { background: var(--blue-d); }
+
+ /* Block date modal */
+ .block-info { font-size: .85rem; color: var(--gray); margin-bottom: 1rem; line-height: 1.6; }
+ .blocked-list { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1rem; max-height: 200px; overflow-y: auto; }
+ .blocked-item { display: flex; align-items: center; justify-content: space-between; background: #fee2e2; border-radius: 8px; padding: .5rem .85rem; font-size: .88rem; color: #991b1b; font-weight: 600; }
+ .unblock-btn { background: none; border: none; cursor: pointer; color: #991b1b; font-size: 1rem; }
+
+ /* Detail modal */
+ .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1.5rem; margin-bottom: 1.25rem; }
+ .detail-field label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--gray); display: block; margin-bottom: .15rem; }
+ .detail-field p { font-size: .92rem; font-weight: 500; }
+ .detail-notes { margin-bottom: 1.25rem; }
+ .detail-actions { display: flex; gap: .75rem; }
+ .detail-actions button { flex: 1; border: none; border-radius: 100px; padding: .7rem; font-size: .9rem; font-weight: 700; cursor: pointer; transition: opacity .2s; }
+ .detail-actions button:hover { opacity: .85; }
+ .detail-approve { background: var(--approved); color: #fff; }
+ .detail-decline { background: var(--declined); color: #fff; }
+
+ @media (max-width: 640px) {
+ .admin-main { padding: 1rem; }
+ .modal-form .form-row { grid-template-columns: 1fr; }
+ .detail-grid { grid-template-columns: 1fr; }
+ thead th:nth-child(n+4) { display: none; }
+ tbody td:nth-child(n+4) { display: none; }
+ }
+ </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════
+ FIREBASE CONFIG — SAME AS index.html
+ ════════════════════════════════════════════════ -->
+<script type="module">
+ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+ import {
+ getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+ } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+ import {
+ getFirestore, collection, addDoc, getDocs, doc,
+ updateDoc, deleteDoc, serverTimestamp, orderBy, query
+ } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+ // ── PASTE YOUR FIREBASE CONFIG HERE (same as index.html) ──
+ const firebaseConfig = {
+ apiKey: "PASTE_YOUR_API_KEY_HERE",
+ authDomain: "PASTE_YOUR_AUTH_DOMAIN_HERE",
+ projectId: "PASTE_YOUR_PROJECT_ID_HERE",
+ storageBucket: "PASTE_YOUR_STORAGE_BUCKET_HERE",
+ messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
+ appId: "PASTE_YOUR_APP_ID_HERE"
+ };
+ // ─────────────────────────────────────────────────────────
+
+ const app = initializeApp(firebaseConfig);
+ const auth = getAuth(app);
+ const db = getFirestore(app);
+
+ let allBookings = [];
+ let blockedDates = [];
+ let currentFilter = 'all';
+ let calYear, calMonth;
+
+ // ── Auth ──────────────────────────────────────────────
+ // AUTH BYPASSED FOR TESTING — re-enable before going live
+ document.getElementById('login-screen').style.display = 'none';
+ document.getElementById('admin-shell').style.display = 'block';
+ document.getElementById('topbar-email').textContent = 'preview mode';
+ // loadData(); // uncomment once Firebase is configured
+
+ onAuthStateChanged(auth, user => {
+ // if (user) {
+ // document.getElementById('login-screen').style.display = 'none';
+ // document.getElementById('admin-shell').style.display = 'block';
+ // document.getElementById('topbar-email').textContent = user.email;
+ // loadData();
+ // } else {
+ // document.getElementById('login-screen').style.display = 'flex';
+ // document.getElementById('admin-shell').style.display = 'none';
+ // }
+ });
+
+ window.doLogin = async function() {
+ const email = document.getElementById('login-email').value.trim();
+ const pass = document.getElementById('login-pass').value;
+ const btn = document.getElementById('login-btn');
+ const err = document.getElementById('login-error');
+ btn.disabled = true; btn.textContent = 'Signing in…';
+ err.style.display = 'none';
+ try {
+ await signInWithEmailAndPassword(auth, email, pass);
+ } catch(e) {
+ err.textContent = 'Incorrect email or password.';
+ err.style.display = 'block';
+ btn.disabled = false; btn.textContent = 'Sign In';
+ }
+ };
+
+ window.doLogout = async function() {
+ await signOut(auth);
+ };
+
+ document.getElementById('login-pass')?.addEventListener('keydown', e => {
+ if (e.key === 'Enter') window.doLogin();
+ });
+
+ // ── Load Data ─────────────────────────────────────────
+ async function loadData() {
+ const now = new Date();
+ calYear = now.getFullYear();
+ calMonth = now.getMonth();
+
+ // Load bookings
+ const bSnap = await getDocs(query(collection(db, "bookings"), orderBy("createdAt", "desc")));
+ allBookings = [];
+ bSnap.forEach(d => allBookings.push({ id: d.id, ...d.data() }));
+
+ // Load blocked dates
+ const blSnap = await getDocs(collection(db, "blocked_dates"));
+ blockedDates = [];
+ blSnap.forEach(d => blockedDates.push({ id: d.id, ...d.data() }));
+
+ renderStats();
+ renderCalendar();
+ renderTable();
+ }
+
+ // ── Stats ─────────────────────────────────────────────
+ function renderStats() {
+ const pending = allBookings.filter(b => b.status === 'pending').length;
+ const approved = allBookings.filter(b => b.status === 'approved').length;
+ const declined = allBookings.filter(b => b.status === 'declined').length;
+ document.getElementById('stat-total').textContent = allBookings.length;
+ document.getElementById('stat-pending').textContent = pending;
+ document.getElementById('stat-approved').textContent = approved;
+ document.getElementById('stat-declined').textContent = declined;
+ }
+
+ // ── Calendar ──────────────────────────────────────────
+ window.calPrev = function() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); };
+ window.calNext = function() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); };
+
+ function renderCalendar() {
+ const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+ document.getElementById('cal-title').textContent = `${monthNames[calMonth]} ${calYear}`;
+
+ const firstDay = new Date(calYear, calMonth, 1).getDay();
+ const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+ const daysInPrev = new Date(calYear, calMonth, 0).getDate();
+ const today = new Date().toISOString().split('T')[0];
+
+ let html = '';
+ let cellCount = 0;
+
+ // Leading blanks
+ for (let i = firstDay - 1; i >= 0; i--) {
+ const d = daysInPrev - i;
+ html += `<div class="cal-cell other-month"><div class="cal-date">${d}</div></div>`;
+ cellCount++;
+ }
+
+ // This month
+ for (let d = 1; d <= daysInMonth; d++) {
+ const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+ const isToday = dateStr === today;
+ const isBlocked = blockedDates.some(b => b.date === dateStr);
+ const dayBooks = allBookings.filter(b => b.date === dateStr);
+ let cls = 'cal-cell';
+ if (isToday) cls += ' today';
+ if (isBlocked) cls += ' blocked';
+ else if (dayBooks.length) cls += ' has-bookings';
+
+ let pips = dayBooks.slice(0, 3).map(b =>
+ `<span class="cal-pip ${b.status}" title="${b.firstName} ${b.lastName}">${b.firstName} ${b.lastName}</span>`
+ ).join('');
+ if (isBlocked) pips += `<span class="cal-blocked-label"> Blocked</span>`;
+
+ html += `<div class="${cls}" onclick="calDayClick('${dateStr}')">
+ <div class="cal-date">${d}</div>${pips}
+ </div>`;
+ cellCount++;
+ }
+
+ // Trailing blanks
+ const trailing = 7 - (cellCount % 7);
+ if (trailing < 7) {
+ for (let d = 1; d <= trailing; d++) {
+ html += `<div class="cal-cell other-month"><div class="cal-date">${d}</div></div>`;
+ }
+ }
+
+ document.getElementById('cal-cells').innerHTML = html;
+ }
+
+ window.calDayClick = function(dateStr) {
+ const isBlocked = blockedDates.some(b => b.date === dateStr);
+ const dayBooks = allBookings.filter(b => b.date === dateStr);
+ if (dayBooks.length > 0) {
+ openDetailModal(dayBooks[0]);
+ } else {
+ openBlockModal(dateStr);
+ }
+ };
+
+ // ── Table ─────────────────────────────────────────────
+ window.setFilter = function(f, el) {
+ currentFilter = f;
+ document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+ el.classList.add('active');
+ renderTable();
+ };
+
+ function renderTable() {
+ const filtered = currentFilter === 'all' ? allBookings : allBookings.filter(b => b.status === currentFilter);
+ const tbody = document.getElementById('bookings-tbody');
+ if (!filtered.length) {
+ tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div></div>No bookings found.</div></td></tr>`;
+ return;
+ }
+ tbody.innerHTML = filtered.map(b => `
+ <tr>
+ <td><strong>${b.firstName} ${b.lastName}</strong><br/><span style="font-size:.78rem;color:var(--gray)">${b.email}</span></td>
+ <td>${b.house || '—'}</td>
+ <td>${formatDate(b.date)}</td>
+ <td>${b.duration || '—'}</td>
+ <td><span class="status-badge ${b.status}">${b.status}</span></td>
+ <td>
+ <div class="row-actions">
+ <button class="row-btn" onclick="openDetailModal(${JSON.stringify(b).replace(/"/g,'&quot;')})">View</button>
+ ${b.status === 'pending' ? `<button class="row-btn approve" onclick="updateStatus('${b.id}','approved')"></button><button class="row-btn decline" onclick="updateStatus('${b.id}','declined')"></button>` : ''}
+ <button class="row-btn delete" onclick="deleteBooking('${b.id}')"></button>
+ </div>
+ </td>
+ </tr>
+ `).join('');
+ }
+
+ function formatDate(dateStr) {
+ if (!dateStr) return '—';
+ const [y,m,d] = dateStr.split('-');
+ const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+ return `${months[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
+ }
+
+ // ── Update Status ─────────────────────────────────────
+ window.updateStatus = async function(id, status) {
+ await updateDoc(doc(db, "bookings", id), { status });
+ const b = allBookings.find(b => b.id === id);
+ if (b) b.status = status;
+ renderStats(); renderCalendar(); renderTable();
+ const dm = document.getElementById('detail-modal');
+ if (dm.classList.contains('open')) closeDetailModal();
+ };
+
+ window.deleteBooking = async function(id) {
+ if (!confirm('Delete this booking? This cannot be undone.')) return;
+ await deleteDoc(doc(db, "bookings", id));
+ allBookings = allBookings.filter(b => b.id !== id);
+ renderStats(); renderCalendar(); renderTable();
+ };
+
+ // ── Manual Add Booking ────────────────────────────────
+ window.openAddModal = function() {
+ document.getElementById('add-modal').classList.add('open');
+ document.body.style.overflow = 'hidden';
+ };
+ window.closeAddModal = function() {
+ document.getElementById('add-modal').classList.remove('open');
+ document.body.style.overflow = '';
+ document.getElementById('add-form').reset();
+ };
+
+ window.submitAddBooking = async function(e) {
+ e.preventDefault();
+ const data = {
+ firstName: document.getElementById('a-fname').value,
+ lastName: document.getElementById('a-lname').value,
+ email: document.getElementById('a-email').value,
+ phone: document.getElementById('a-phone').value,
+ house: document.getElementById('a-house').value,
+ date: document.getElementById('a-date').value,
+ duration: document.getElementById('a-duration').value,
+ address: document.getElementById('a-address').value,
+ notes: document.getElementById('a-notes').value,
+ status: 'manual',
+ createdAt: serverTimestamp()
+ };
+ const ref = await addDoc(collection(db, "bookings"), data);
+ allBookings.unshift({ id: ref.id, ...data });
+ renderStats(); renderCalendar(); renderTable();
+ closeAddModal();
+ };
+
+ // ── Block Dates ───────────────────────────────────────
+ window.openBlockModal = function(prefillDate) {
+ document.getElementById('block-modal').classList.add('open');
+ document.body.style.overflow = 'hidden';
+ if (prefillDate) document.getElementById('block-date-input').value = prefillDate;
+ renderBlockedList();
+ };
+ window.closeBlockModal = function() {
+ document.getElementById('block-modal').classList.remove('open');
+ document.body.style.overflow = '';
+ };
+
+ function renderBlockedList() {
+ const el = document.getElementById('blocked-list');
+ if (!blockedDates.length) {
+ el.innerHTML = '<p style="font-size:.85rem;color:var(--gray)">No dates blocked yet.</p>';
+ return;
+ }
+ el.innerHTML = blockedDates.map(b =>
+ `<div class="blocked-item">${formatDate(b.date)} <button class="unblock-btn" onclick="unblockDate('${b.id}')"></button></div>`
+ ).join('');
+ }
+
+ window.blockDate = async function() {
+ const dateVal = document.getElementById('block-date-input').value;
+ if (!dateVal) return;
+ if (blockedDates.some(b => b.date === dateVal)) {
+ alert('This date is already blocked.');
+ return;
+ }
+ const ref = await addDoc(collection(db, "blocked_dates"), { date: dateVal });
+ blockedDates.push({ id: ref.id, date: dateVal });
+ renderBlockedList();
+ renderCalendar();
+ document.getElementById('block-date-input').value = '';
+ };
+
+ window.unblockDate = async function(id) {
+ await deleteDoc(doc(db, "blocked_dates", id));
+ blockedDates = blockedDates.filter(b => b.id !== id);
+ renderBlockedList();
+ renderCalendar();
+ };
+
+ // ── Detail Modal ──────────────────────────────────────
+ window.openDetailModal = function(b) {
+ if (typeof b === 'string') b = JSON.parse(b);
+ document.getElementById('d-name').textContent = `${b.firstName} ${b.lastName}`;
+ document.getElementById('d-email').textContent = b.email || '—';
+ document.getElementById('d-phone').textContent = b.phone || '—';
+ document.getElementById('d-house').textContent = b.house || '—';
+ document.getElementById('d-date').textContent = formatDate(b.date);
+ document.getElementById('d-duration').textContent = b.duration || '—';
+ document.getElementById('d-address').textContent = b.address || '—';
+ document.getElementById('d-notes').textContent = b.notes || 'None';
+ document.getElementById('d-status').className = `status-badge ${b.status}`;
+ document.getElementById('d-status').textContent = b.status;
+ const approveBtn = document.getElementById('d-approve-btn');
+ const declineBtn = document.getElementById('d-decline-btn');
+ approveBtn.onclick = () => updateStatus(b.id, 'approved');
+ declineBtn.onclick = () => updateStatus(b.id, 'declined');
+ approveBtn.style.display = (b.status === 'approved') ? 'none' : 'block';
+ declineBtn.style.display = (b.status === 'declined') ? 'none' : 'block';
+ document.getElementById('detail-modal').classList.add('open');
+ document.body.style.overflow = 'hidden';
+ };
+ window.closeDetailModal = function() {
+ document.getElementById('detail-modal').classList.remove('open');
+ document.body.style.overflow = '';
+ };
+
+ document.addEventListener('keydown', e => {
+ if (e.key === 'Escape') {
+ closeAddModal(); closeBlockModal(); closeDetailModal();
+ }
+ });
+</script>
+
+<!-- ══════════════════════ ADMIN SHELL ══════════════════════ -->
+<div id="admin-shell">
+
+ <!-- Topbar -->
+ <div class="topbar">
+ <div class="topbar-brand"> Sopris <span>Admin</span></div>
+ <div class="topbar-right">
+ <span class="topbar-user" id="topbar-email"></span>
+ <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+ </div>
+ </div>
+
+ <div class="admin-main">
+
+ <!-- Stats -->
+ <div class="stats-row">
+ <div class="stat-card"><div class="stat-card-num total" id="stat-total">—</div><div class="stat-card-lbl">Total Bookings</div></div>
+ <div class="stat-card"><div class="stat-card-num pending" id="stat-pending">—</div><div class="stat-card-lbl">Pending</div></div>
+ <div class="stat-card"><div class="stat-card-num approved" id="stat-approved">—</div><div class="stat-card-lbl">Approved</div></div>
+ <div class="stat-card"><div class="stat-card-num declined" id="stat-declined">—</div><div class="stat-card-lbl">Declined</div></div>
+ </div>
+
+ <!-- Calendar -->
+ <div class="calendar-wrap">
+ <div class="cal-nav">
+ <button onclick="calPrev()">‹</button>
+ <h3 id="cal-title"></h3>
+ <button onclick="calNext()">›</button>
+ </div>
+ <div class="cal-grid">
+ <div class="cal-day-label">Sun</div>
+ <div class="cal-day-label">Mon</div>
+ <div class="cal-day-label">Tue</div>
+ <div class="cal-day-label">Wed</div>
+ <div class="cal-day-label">Thu</div>
+ <div class="cal-day-label">Fri</div>
+ <div class="cal-day-label">Sat</div>
+ <div id="cal-cells" style="display:contents;"></div>
+ </div>
+ <div class="cal-legend">
+ <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div> Pending</div>
+ <div class="legend-item"><div class="legend-dot" style="background:#16A34A"></div> Approved</div>
+ <div class="legend-item"><div class="legend-dot" style="background:#DC2626"></div> Declined</div>
+ <div class="legend-item"><div class="legend-dot" style="background:#fee2e2;border:1px solid #fca5a5"></div> Blocked</div>
+ <div class="legend-item" style="margin-left:auto"><button class="btn-action" onclick="openBlockModal()"> Block a Date</button></div>
+ </div>
+ </div>
+
+ <!-- Bookings Table -->
+ <div class="section-header">
+ <h2>Booking Requests</h2>
+ <button class="btn-action purple" onclick="openAddModal()">+ Add Booking</button>
+ </div>
+ <div class="table-wrap">
+ <div class="table-filters">
+ <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+ <button class="filter-btn pending" onclick="setFilter('pending', this)">Pending</button>
+ <button class="filter-btn approved" onclick="setFilter('approved', this)">Approved</button>
+ <button class="filter-btn declined" onclick="setFilter('declined', this)">Declined</button>
+ </div>
+ <table>
+ <thead>
+ <tr>
+ <th>Customer</th>
+ <th>Bounce House</th>
+ <th>Date</th>
+ <th>Duration</th>
+ <th>Status</th>
+ <th>Actions</th>
+ </tr>
+ </thead>
+ <tbody id="bookings-tbody">
+ <tr><td colspan="6"><div class="empty-state"><div></div>Loading…</div></td></tr>
+ </tbody>
+ </table>
+ </div>
+
+ </div><!-- /admin-main -->
+</div><!-- /admin-shell -->
+
+<!-- ══════ MODAL: Add Booking ══════ -->
+<div class="modal-overlay" id="add-modal" onclick="if(event.target===this)closeAddModal()">
+ <div class="modal-box">
+ <button class="modal-close-btn" onclick="closeAddModal()"></button>
+ <h3>Add a Booking</h3>
+ <p class="modal-desc">Manually add a booking (e.g. for phone-in reservations).</p>
+ <form class="modal-form" id="add-form" onsubmit="submitAddBooking(event)">
+ <div class="form-row">
+ <div class="fg"><label>First Name *</label><input type="text" id="a-fname" required /></div>
+ <div class="fg"><label>Last Name *</label><input type="text" id="a-lname" required /></div>
+ </div>
+ <div class="form-row">
+ <div class="fg"><label>Email *</label><input type="email" id="a-email" required /></div>
+ <div class="fg"><label>Phone *</label><input type="tel" id="a-phone" required /></div>
+ </div>
+ <div class="fg">
+ <label>Bounce House *</label>
+ <select id="a-house" required>
+ <option value="">Select…</option>
+ <option value="The Meadow Castle">The Meadow Castle</option>
+ <option value="The Sopris Princess Castle">The Sopris Princess Castle</option>
+ </select>
+ </div>
+ <div class="form-row">
+ <div class="fg"><label>Event Date *</label><input type="date" id="a-date" required /></div>
+ <div class="fg">
+ <label>Duration</label>
+ <select id="a-duration">
+ <option value="4 Hours — $250">4 Hours — $250</option>
+ <option value="All Day (8 hrs) — $400">All Day (8 hrs) — $400</option>
+ <option value="Custom (hourly) — $100/hr">Custom (hourly) — $100/hr</option>
+ </select>
+ </div>
+ </div>
+ <div class="fg"><label>Event Address *</label><input type="text" id="a-address" required /></div>
+ <div class="fg"><label>Notes</label><textarea id="a-notes" placeholder="Any additional details…"></textarea></div>
+ <button type="submit" class="modal-submit">Save Booking</button>
+ </form>
+ </div>
+</div>
+
+<!-- ══════ MODAL: Block Dates ══════ -->
+<div class="modal-overlay" id="block-modal" onclick="if(event.target===this)closeBlockModal()">
+ <div class="modal-box">
+ <button class="modal-close-btn" onclick="closeBlockModal()"></button>
+ <h3> Block Dates</h3>
+ <p class="block-info">Blocked dates will show as unavailable on the public booking form. Use this for vacations, maintenance days, or dates already booked offline.</p>
+ <div id="blocked-list" class="blocked-list"></div>
+ <div style="display:flex;gap:.75rem;align-items:flex-end">
+ <div class="fg" style="flex:1"><label>Add a blocked date</label><input type="date" id="block-date-input" /></div>
+ <button class="btn-action" style="margin-bottom:0;height:40px;padding:0 1.25rem" onclick="blockDate()">Block</button>
+ </div>
+ </div>
+</div>
+
+<!-- ══════ MODAL: Booking Detail ══════ -->
+<div class="modal-overlay" id="detail-modal" onclick="if(event.target===this)closeDetailModal()">
+ <div class="modal-box">
+ <button class="modal-close-btn" onclick="closeDetailModal()"></button>
+ <h3 id="d-name" style="margin-bottom:.35rem"></h3>
+ <p style="margin-bottom:1.25rem"><span class="status-badge" id="d-status"></span></p>
+ <div class="detail-grid">
+ <div class="detail-field"><label>Email</label><p id="d-email"></p></div>
+ <div class="detail-field"><label>Phone</label><p id="d-phone"></p></div>
+ <div class="detail-field"><label>Bounce House</label><p id="d-house"></p></div>
+ <div class="detail-field"><label>Event Date</label><p id="d-date"></p></div>
+ <div class="detail-field"><label>Duration</label><p id="d-duration"></p></div>
+ <div class="detail-field"><label>Address</label><p id="d-address"></p></div>
+ </div>
+ <div class="detail-notes">
+ <div class="detail-field"><label>Notes</label><p id="d-notes"></p></div>
+ </div>
+ <div class="detail-actions">
+ <button class="detail-approve" id="d-approve-btn"> Approve</button>
+ <button class="detail-decline" id="d-decline-btn"> Decline</button>
+ </div>
+ </div>
+</div>
+
+</body>
+</html>
