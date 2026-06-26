@@ -55,12 +55,12 @@
  .hero-title em { color: var(--gold); font-style: italic; }
  .hero-sub { font-size: clamp(1rem, 2vw, 1.2rem); color: rgba(255,255,255,.85); max-width: 520px; line-height: 1.7; margin-bottom: 1rem; }
  .hero-towns { color: rgba(255,255,255,.7); font-size: .85rem; letter-spacing: .04em; margin-bottom: 2rem; }
- .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+ .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
  .btn-primary { background: var(--gold); color: var(--charcoal); border: none; border-radius: 100px; padding: .85rem 2rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: transform .2s, box-shadow .2s; text-decoration: none; display: inline-block; }
  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,158,11,.4); }
  .btn-outline { background: transparent; color: var(--white); border: 2px solid rgba(255,255,255,.5); border-radius: 100px; padding: .85rem 2rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: border-color .2s, background .2s; text-decoration: none; display: inline-block; }
  .btn-outline:hover { border-color: var(--white); background: rgba(255,255,255,.1); }
- .hero-meadow { position: absolute; bottom: 0; left: 0; right: 0; line-height: 0; }
+ .hero-meadow { position: absolute; bottom: 0; left: 0; right: 0; line-height: 0; pointer-events: none; z-index: 0; }
  .hero-stats { display: flex; gap: 3rem; margin-top: 4rem; padding-bottom: 80px; }
  .stat { color: var(--white); text-align: center; }
  .stat-num { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 700; color: var(--gold); }
