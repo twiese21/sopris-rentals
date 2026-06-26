@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Sopris Party Rentals</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --blue:#2A7BBF; --blue-d:#1A5F9A; --purple:#8B5CF6; --red:#DC2626; --bg:#F0F6FF; --border:#DBEAFE; --gray:#64748B; --charcoal:#1E2A3A; }
+    body { font-family:'Inter',sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(160deg,#1A5F9A 0%,#2A7BBF 50%,#8B5CF6 130%); padding:1rem; }
+    .login-box { background:#fff; border-radius:20px; padding:2.5rem; width:100%; max-width:400px; box-shadow:0 24px 80px rgba(30,42,58,.25); }
+    .login-logo { font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--blue); margin-bottom:.25rem; }
+    .login-logo span { color:var(--purple); }
+    .login-sub { font-size:.85rem; color:var(--gray); margin-bottom:2rem; }
+    label { font-size:.82rem; font-weight:600; display:block; margin-bottom:.4rem; color:var(--charcoal); }
+    input { width:100%; padding:.7rem 1rem; border:1.5px solid var(--border); border-radius:10px; font-size:.95rem; font-family:'Inter',sans-serif; margin-bottom:1.25rem; outline:none; transition:border-color .2s; background:var(--bg); }
+    input:focus { border-color:var(--blue); }
+    .login-btn { width:100%; background:var(--blue); color:#fff; border:none; border-radius:100px; padding:.85rem; font-size:1rem; font-weight:700; cursor:pointer; transition:background .2s; }
+    .login-btn:hover { background:var(--blue-d); }
+    .login-btn:disabled { background:var(--gray); cursor:not-allowed; }
+    #login-error { color:var(--red); font-size:.85rem; margin-top:.75rem; display:none; text-align:center; }
+    .back-link { display:block; text-align:center; margin-top:1.25rem; font-size:.85rem; color:var(--gray); text-decoration:none; }
+    .back-link:hover { color:var(--blue); }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="login-logo">Sopris <span>Admin</span></div>
+    <p class="login-sub">Sopris Party Rentals — Staff Portal</p>
+    <label for="login-email">Email</label>
+    <input type="email" id="login-email" placeholder="admin@soprispartyrentals.com" />
+    <label for="login-pass">Password</label>
+    <input type="password" id="login-pass" placeholder="••••••••" />
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Sign In</button>
+    <p id="login-error">Incorrect email or password.</p>
+    <a class="back-link" href="index.html">Back to main site</a>
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCosw2zO30uygcPEbMNV-_pK4Ay1irQ8nA",
+    authDomain:        "sopris-rentals.firebaseapp.com",
+    projectId:         "sopris-rentals",
+    storageBucket:     "sopris-rentals.firebasestorage.app",
+    messagingSenderId: "901315229389",
+    appId:             "1:901315229389:web:c86a72026a3dac024f1b84",
+    measurementId:     "G-PNJ8B02H1K"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // If already logged in, go straight to admin
+  onAuthStateChanged(auth, user => {
+    if (user) window.location.href = 'admin.html';
+  });
+
+  window.doLogin = async function() {
+    const email = document.getElementById('login-email').value.trim();
+    const pass  = document.getElementById('login-pass').value;
+    const btn   = document.getElementById('login-btn');
+    const err   = document.getElementById('login-error');
+    btn.disabled = true; btn.textContent = 'Signing in...';
+    err.style.display = 'none';
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      window.location.href = 'admin.html';
+    } catch(e) {
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Sign In';
+    }
+  };
+
+  document.getElementById('login-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.doLogin();
+  });
+</script>
+</body>
+</html>
