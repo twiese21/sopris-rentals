@@ -262,6 +262,7 @@
   // ── EmailJS Config ─────────────────────────────
   const EJS_SERVICE = "service_j1iiuz4";
   const EJS_STATUS  = "template_u1fybbp";  // customer approved/declined email
+  const EJS_DOCS    = "template_4cl62xj";  // send contract + waiver link
   const EJS_KEY     = "_5MGevXDzKCGomFlP";
   // ─────────────────────────────────────────────
 
@@ -520,6 +521,7 @@
         <td>${formatDate(b.date)}</td>
         <td>${b.duration||'—'}</td>
         <td><span class="status-badge ${b.status}">${b.status}</span></td>
+        <td>${b.contractSigned && b.waiverSigned ? '<span class="status-badge approved">Signed</span>' : b.docsSent ? '<span class="status-badge pending">Sent</span>' : '<span style="font-size:.78rem;color:var(--gray)">—</span>'}</td>
         <td><div class="row-actions">
           <button class="row-btn" onclick='openDetailModal(${JSON.stringify(b).replace(/'/g,"&#39;")})'>View</button>
           ${b.status==='pending'?`<button class="row-btn approve" onclick="updateStatus('${b.id}','approved')">Approve</button><button class="row-btn decline" onclick="updateStatus('${b.id}','declined')">Decline</button>`:''}
@@ -563,6 +565,33 @@
     }
     renderBookingStats(); renderCalendar(); renderTable(); renderFinance();
     if(document.getElementById('detail-modal').classList.contains('open')) closeDetailModal();
+  };
+
+  window.sendDocuments = async function(b) {
+    const btn = document.getElementById('send-docs-btn');
+    if(btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+    try {
+      const signingLink = `${window.location.origin}/sign.html?id=${b.id}`;
+      await emailjs.send(EJS_SERVICE, EJS_DOCS, {
+        customer_name:  b.firstName,
+        customer_email: b.email,
+        bounce_house:   b.house,
+        event_date:     b.date,
+        start_time:     b.startTime  || "",
+        total_price:    b.totalPrice ? "$" + b.totalPrice : "TBD",
+        signing_link:   signingLink
+      });
+      // Mark documents as sent in Firestore
+      await updateDoc(doc(db,"bookings",b.id), { docsSent: true, docsSentAt: serverTimestamp() });
+      const found = allBookings.find(x => x.id === b.id);
+      if(found) found.docsSent = true;
+      if(btn) { btn.textContent = 'Documents Sent!'; btn.style.background = '#16A34A'; }
+      renderTable();
+    } catch(err) {
+      console.error('Send docs error:', err);
+      if(btn) { btn.disabled = false; btn.textContent = 'Send Documents'; }
+      alert('Failed to send documents. Please try again.');
+    }
   };
 
   window.deleteBooking = async id => {
@@ -640,6 +669,32 @@
     ab.onclick=()=>updateStatus(b.id,'approved'); db2.onclick=()=>updateStatus(b.id,'declined');
     ab.style.display=b.status==='approved'?'none':'block';
     db2.style.display=b.status==='declined'?'none':'block';
+    // Show send docs button for approved bookings
+    window._currentDetailBooking = b;
+    const docsWrap   = document.getElementById('send-docs-wrap');
+    const docsStatus = document.getElementById('docs-signed-status');
+    const docsBtn    = document.getElementById('send-docs-btn');
+    if(b.status === 'approved') {
+      docsWrap.style.display = 'block';
+      if(b.contractSigned && b.waiverSigned) {
+        docsBtn.textContent = 'Documents Signed';
+        docsBtn.disabled = true;
+        docsBtn.style.background = '#16A34A';
+        docsStatus.textContent = 'Customer has signed both documents.';
+      } else if(b.docsSent) {
+        docsBtn.textContent = 'Resend Contract & Waiver';
+        docsBtn.disabled = false;
+        docsBtn.style.background = 'var(--blue)';
+        docsStatus.textContent = 'Documents sent — awaiting customer signature.';
+      } else {
+        docsBtn.textContent = 'Send Contract & Waiver';
+        docsBtn.disabled = false;
+        docsBtn.style.background = 'var(--blue)';
+        docsStatus.textContent = '';
+      }
+    } else {
+      docsWrap.style.display = 'none';
+    }
     document.getElementById('detail-modal').classList.add('open'); document.body.style.overflow='hidden';
   };
   window.closeDetailModal = () => { document.getElementById('detail-modal').classList.remove('open'); document.body.style.overflow=''; };
@@ -873,7 +928,7 @@
           <button class="filter-btn declined"  onclick="setFilter('declined',this)">Declined</button>
         </div>
         <table>
-          <thead><tr><th>Customer</th><th>Bounce House</th><th>Date</th><th>Duration</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Customer</th><th>Bounce House</th><th>Date</th><th>Duration</th><th>Status</th><th>Docs</th><th>Actions</th></tr></thead>
           <tbody id="bookings-tbody"><tr><td colspan="6"><div class="empty-state">Loading...</div></td></tr></tbody>
         </table>
       </div>
@@ -1089,6 +1144,12 @@
     <div class="detail-actions">
       <button class="detail-approve" id="d-approve-btn">Approve</button>
       <button class="detail-decline" id="d-decline-btn">Decline</button>
+    </div>
+    <div id="send-docs-wrap" style="margin-top:.75rem;display:none">
+      <button id="send-docs-btn" onclick="sendDocuments(window._currentDetailBooking)" style="width:100%;background:var(--blue);color:white;border:none;border-radius:100px;padding:.7rem;font-size:.9rem;font-weight:700;cursor:pointer;">
+        Send Contract & Waiver
+      </button>
+      <p id="docs-signed-status" style="font-size:.8rem;text-align:center;margin-top:.5rem;color:var(--gray)"></p>
     </div>
   </div>
 </div>

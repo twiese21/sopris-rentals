@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Your Documents — Sopris Party Rentals</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue:    #2A7BBF; --blue-d: #1A5F9A;
+      --purple:  #8B5CF6; --green:  #16A34A;
+      --red:     #DC2626; --gold:   #F59E0B;
+      --bg:      #F0F6FF; --surface:#FFFFFF;
+      --border:  #DBEAFE; --charcoal:#1E2A3A;
+      --gray:    #64748B;
+    }
+    body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--charcoal); min-height:100vh; }
+
+    /* Header */
+    .site-header { background:var(--charcoal); padding:1rem 5%; display:flex; align-items:center; justify-content:space-between; }
+    .site-header-brand { font-family:'Playfair Display',serif; color:white; font-size:1.1rem; }
+    .site-header-brand span { color:var(--gold); }
+    .site-header-sub { font-size:.8rem; color:rgba(255,255,255,.5); }
+
+    /* Main */
+    .main { max-width:820px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+
+    /* Status states */
+    #loading-state, #error-state, #success-state { text-align:center; padding:4rem 2rem; }
+    .state-icon { font-size:3.5rem; margin-bottom:1rem; }
+    .state-title { font-family:'Playfair Display',serif; font-size:1.8rem; margin-bottom:.5rem; }
+    .state-sub { color:var(--gray); font-size:.95rem; line-height:1.6; }
+    .spinner { width:48px; height:48px; border:4px solid var(--border); border-top-color:var(--blue); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 1.5rem; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Booking card */
+    .booking-card { background:var(--surface); border-radius:14px; border:1px solid var(--border); padding:1.5rem; margin-bottom:2rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; }
+    .booking-field label { font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--gray); display:block; margin-bottom:.2rem; }
+    .booking-field p { font-size:.95rem; font-weight:600; color:var(--charcoal); }
+
+    /* Progress steps */
+    .progress { display:flex; align-items:center; gap:0; margin-bottom:2.5rem; }
+    .progress-step { display:flex; align-items:center; gap:.5rem; font-size:.82rem; font-weight:600; color:var(--gray); }
+    .progress-step.active { color:var(--blue); }
+    .progress-step.done { color:var(--green); }
+    .progress-num { width:28px; height:28px; border-radius:50%; border:2px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; flex-shrink:0; }
+    .progress-step.done .progress-num { background:var(--green); border-color:var(--green); color:white; }
+    .progress-step.active .progress-num { background:var(--blue); border-color:var(--blue); color:white; }
+    .progress-line { flex:1; height:2px; background:var(--border); margin:0 .5rem; }
+    .progress-line.done { background:var(--green); }
+
+    /* Document section */
+    .doc-section { background:var(--surface); border-radius:14px; border:1px solid var(--border); margin-bottom:1.5rem; overflow:hidden; }
+    .doc-header { display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.5rem; border-bottom:1px solid var(--border); cursor:pointer; user-select:none; }
+    .doc-header h3 { font-family:'Playfair Display',serif; font-size:1.15rem; display:flex; align-items:center; gap:.6rem; }
+    .doc-toggle { font-size:.85rem; color:var(--blue); font-weight:600; }
+    .doc-body { padding:1.5rem; max-height:400px; overflow-y:auto; font-size:.88rem; line-height:1.8; color:var(--charcoal); border-bottom:1px solid var(--border); }
+    .doc-body h4 { font-size:.95rem; font-weight:700; margin:1.25rem 0 .5rem; color:var(--charcoal); }
+    .doc-body p { margin-bottom:.75rem; }
+    .doc-body ul { padding-left:1.5rem; margin-bottom:.75rem; }
+    .doc-body ul li { margin-bottom:.35rem; }
+    .doc-body .doc-highlight { background:var(--bg); border-left:3px solid var(--blue); padding:.5rem .75rem; border-radius:0 8px 8px 0; margin:.5rem 0; font-weight:500; }
+    .doc-signed-badge { display:inline-flex; align-items:center; gap:.4rem; background:#d1fae5; color:#065f46; font-size:.78rem; font-weight:700; padding:.3rem .75rem; border-radius:100px; }
+
+    /* Signature form */
+    .sign-form { padding:1.25rem 1.5rem; }
+    .sign-form label { font-size:.82rem; font-weight:600; display:block; margin-bottom:.4rem; }
+    .sign-form input[type=text] { width:100%; padding:.7rem 1rem; border:1.5px solid var(--border); border-radius:10px; font-size:.95rem; font-family:'Inter',sans-serif; outline:none; transition:border-color .2s; background:var(--bg); margin-bottom:1rem; }
+    .sign-form input[type=text]:focus { border-color:var(--blue); }
+    .sign-form .agree-row { display:flex; gap:.75rem; align-items:flex-start; margin-bottom:1rem; }
+    .sign-form input[type=checkbox] { width:18px; height:18px; flex-shrink:0; margin-top:2px; accent-color:var(--blue); cursor:pointer; }
+    .sign-form .agree-text { font-size:.85rem; color:var(--charcoal); line-height:1.5; }
+
+    /* Buttons */
+    .btn-sign { background:var(--blue); color:white; border:none; border-radius:100px; padding:.85rem 2rem; font-size:1rem; font-weight:700; cursor:pointer; transition:background .2s; width:100%; }
+    .btn-sign:hover { background:var(--blue-d); }
+    .btn-sign:disabled { background:var(--gray); cursor:not-allowed; }
+    .btn-sign.green { background:var(--green); }
+    .btn-sign.green:hover { background:#15803D; }
+
+    /* Final submit */
+    .final-submit-wrap { background:var(--surface); border-radius:14px; border:1px solid var(--border); padding:1.5rem; margin-top:1.5rem; }
+    .final-submit-wrap h3 { font-family:'Playfair Display',serif; font-size:1.1rem; margin-bottom:.5rem; }
+    .final-submit-wrap p { font-size:.88rem; color:var(--gray); margin-bottom:1.25rem; line-height:1.6; }
+
+    /* Success */
+    .success-wrap { text-align:center; padding:3rem 1rem; }
+    .success-wrap .check { width:72px; height:72px; background:#d1fae5; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem; font-size:2rem; }
+    .success-wrap h2 { font-family:'Playfair Display',serif; font-size:2rem; margin-bottom:.5rem; }
+    .success-wrap p { color:var(--gray); font-size:.95rem; line-height:1.7; max-width:480px; margin:0 auto; }
+
+    /* Already signed */
+    .already-signed { background:#d1fae5; border:1px solid #6ee7b7; border-radius:14px; padding:2rem; text-align:center; margin-bottom:1.5rem; }
+    .already-signed h3 { color:#065f46; font-family:'Playfair Display',serif; font-size:1.3rem; margin-bottom:.4rem; }
+    .already-signed p { color:#047857; font-size:.9rem; }
+
+    @media (max-width:600px) {
+      .main { padding:1.5rem 1rem 3rem; }
+      .booking-card { grid-template-columns:1fr 1fr; }
+      .progress-step span { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="site-header">
+  <div>
+    <div class="site-header-brand">Sopris <span>Party Rentals</span></div>
+    <div class="site-header-sub">Document Signing Portal</div>
+  </div>
+  <div style="font-size:.8rem;color:rgba(255,255,255,.5)">soprispartyrentals.com</div>
+</div>
+
+<div class="main">
+
+  <!-- Loading -->
+  <div id="loading-state">
+    <div class="spinner"></div>
+    <p style="color:var(--gray)">Loading your documents...</p>
+  </div>
+
+  <!-- Error -->
+  <div id="error-state" style="display:none">
+    <div class="state-icon">⚠️</div>
+    <div class="state-title">Link Not Found</div>
+    <p class="state-sub">This signing link is invalid or has expired. Please contact us at<br><a href="mailto:taylor@soprispartyrentals.com" style="color:var(--blue)">taylor@soprispartyrentals.com</a> or call 970-379-2945.</p>
+  </div>
+
+  <!-- Already signed -->
+  <div id="signed-state" style="display:none">
+    <div class="already-signed">
+      <h3>Documents Already Signed</h3>
+      <p>You have already completed your documents for this booking. No further action is needed.</p>
+    </div>
+    <div id="booking-info-signed" class="booking-card"></div>
+  </div>
+
+  <!-- Main signing flow -->
+  <div id="signing-state" style="display:none">
+
+    <div style="margin-bottom:1.5rem">
+      <h1 style="font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:.35rem">Review & Sign Your Documents</h1>
+      <p style="color:var(--gray);font-size:.9rem">Please read both documents carefully and sign below. Your signature is required before your event.</p>
+    </div>
+
+    <!-- Booking summary -->
+    <div id="booking-card" class="booking-card"></div>
+
+    <!-- Progress -->
+    <div class="progress">
+      <div class="progress-step active" id="step1-indicator">
+        <div class="progress-num">1</div>
+        <span>Rental Agreement</span>
+      </div>
+      <div class="progress-line" id="line1"></div>
+      <div class="progress-step" id="step2-indicator">
+        <div class="progress-num">2</div>
+        <span>Liability Waiver</span>
+      </div>
+      <div class="progress-line" id="line2"></div>
+      <div class="progress-step" id="step3-indicator">
+        <div class="progress-num">3</div>
+        <span>Complete</span>
+      </div>
+    </div>
+
+    <!-- Document 1: Rental Agreement -->
+    <div class="doc-section" id="doc1-section">
+      <div class="doc-header" onclick="toggleDoc('doc1-body', this)">
+        <h3 id="doc1-title">📄 Rental Agreement</h3>
+        <span class="doc-toggle">Read Document ▼</span>
+      </div>
+      <div class="doc-body" id="doc1-body" style="display:none">
+        <h4>SOPRIS PARTY RENTALS — BOUNCE HOUSE RENTAL AGREEMENT</h4>
+        <p>This Bounce House Rental Agreement ("Agreement") is entered into between Sopris Party Rentals ("Company") and the Renter identified in the booking details above.</p>
+
+        <h4>1. PAYMENT TERMS</h4>
+        <p>The total rental fee is due in full on or before the day of the event. Sopris Party Rentals does not require a deposit at the time of booking.</p>
+
+        <h4>2. CANCELLATION POLICY</h4>
+        <p>Renter may cancel this Agreement without penalty with at least 24 hours notice prior to the scheduled event. Cancellations made less than 24 hours before the event may result in a cancellation fee at the Company's discretion.</p>
+        <p>Sopris Party Rentals reserves the right to cancel any rental due to unsafe weather conditions including high winds exceeding 25 mph, lightning, or heavy rain. In the event of a Company-initiated weather cancellation, the Renter will be offered a full reschedule at no charge.</p>
+
+        <h4>3. DELIVERY, SETUP & PICKUP</h4>
+        <p>Sopris Party Rentals will deliver, set up, and retrieve the bounce house at the agreed times. The Renter agrees to ensure a clear, flat setup area is available and to be present at the event address at the agreed delivery time.</p>
+
+        <h4>4. RULES OF USE</h4>
+        <ul>
+          <li>No shoes of any kind inside the bounce house.</li>
+          <li>No water, water guns, water balloons, or any liquid inside or around the bounce house.</li>
+          <li>No silly string, confetti, paint, or any substance that may damage the inflatable.</li>
+          <li>No sharp objects or jewelry worn inside the bounce house.</li>
+          <li>Minimum age of 3 years for all users.</li>
+          <li>No flipping, wrestling, or unsafe behavior inside the bounce house.</li>
+          <li>Maximum capacity must not be exceeded at any time.</li>
+          <li>Adult supervision is required at all times.</li>
+        </ul>
+
+        <h4>5. DAMAGE & EQUIPMENT RESPONSIBILITY</h4>
+        <p>The Renter is responsible for the bounce house from setup until pickup. The Renter accepts financial responsibility for significant damage caused by misuse or negligence. Normal wear and tear including small pinholes are excluded from the Renter's responsibility.</p>
+
+        <h4>6. ASSUMPTION OF RISK & LIABILITY</h4>
+        <p>The Renter acknowledges that the use of inflatable bounce houses involves inherent risks of physical injury and assumes full responsibility for any injuries or incidents that occur during the rental period.</p>
+
+        <h4>7. GOVERNING LAW</h4>
+        <p>This Agreement shall be governed by the laws of the State of Colorado. Any disputes shall be resolved in the courts of Garfield County, Colorado.</p>
+
+        <div class="doc-highlight">By signing below you agree to all terms of this Rental Agreement.</div>
+      </div>
+      <div class="sign-form" id="doc1-form">
+        <label for="sig1-name">Type your full legal name to sign *</label>
+        <input type="text" id="sig1-name" placeholder="Your full name" />
+        <div class="agree-row">
+          <input type="checkbox" id="sig1-agree" />
+          <div class="agree-text">I have read the Rental Agreement in full and agree to all terms and conditions.</div>
+        </div>
+        <button class="btn-sign" id="doc1-btn" onclick="signDocument(1)">Sign Rental Agreement</button>
+      </div>
+    </div>
+
+    <!-- Document 2: Liability Waiver -->
+    <div class="doc-section" id="doc2-section" style="opacity:.5;pointer-events:none">
+      <div class="doc-header" onclick="toggleDoc('doc2-body', this)">
+        <h3 id="doc2-title">📄 Liability Waiver</h3>
+        <span class="doc-toggle">Read Document ▼</span>
+      </div>
+      <div class="doc-body" id="doc2-body" style="display:none">
+        <h4>SOPRIS PARTY RENTALS — RELEASE OF LIABILITY, WAIVER OF CLAIMS, AND ASSUMPTION OF RISK</h4>
+        <p class="doc-highlight" style="border-color:var(--red);color:var(--red)">PLEASE READ THIS DOCUMENT CAREFULLY BEFORE SIGNING. BY SIGNING YOU ARE GIVING UP IMPORTANT LEGAL RIGHTS.</p>
+
+        <h4>1. ACKNOWLEDGMENT OF INHERENT RISKS</h4>
+        <p>The Renter understands that the use of inflatable bounce house equipment involves inherent risks including falls, collisions, impacts, and injuries resulting from improper use. The Renter voluntarily and knowingly assumes all such risks.</p>
+
+        <h4>2. ASSUMPTION OF LIABILITY FOR PERSONAL INJURY</h4>
+        <p>The Renter agrees to assume full and complete liability for any and all bodily injury, illness, death, or property damage sustained by any person using the bounce house during the rental period, including the Renter, minor children under the Renter's supervision, and all guests and attendees.</p>
+        <p>Sopris Party Rentals, its owners, employees, contractors, and agents shall not be held liable for any injuries or claims arising from the use of the rental equipment during the rental period, to the fullest extent permitted by Colorado law.</p>
+
+        <h4>3. RESPONSIBILITY FOR EQUIPMENT DAMAGE</h4>
+        <p>The Renter accepts full financial responsibility for significant damage to the bounce house caused by misuse, overloading, introduction of prohibited items, unauthorized movement, or any negligent act. Normal wear and tear including small pinholes are excluded.</p>
+
+        <h4>4. RELEASE OF CLAIMS</h4>
+        <p>The Renter, on behalf of themselves, their heirs, personal representatives, and assigns, hereby fully and forever releases, discharges, and holds harmless Sopris Party Rentals, its owners, officers, employees, and agents from any and all claims, demands, losses, liabilities, and causes of action arising out of or in connection with the use of the rental equipment.</p>
+
+        <h4>5. INDEMNIFICATION</h4>
+        <p>The Renter agrees to indemnify and hold harmless Sopris Party Rentals from any claims, suits, losses, or legal fees arising from any injury, death, or property damage related to the rental, including claims made by third parties present at the event.</p>
+
+        <h4>6. SUPERVISION ACKNOWLEDGMENT</h4>
+        <p>The Renter is solely responsible for ensuring appropriate adult supervision of all users at all times. The minimum age for use is 3 years. The Renter accepts responsibility for enforcing all safety rules.</p>
+
+        <h4>7. GOVERNING LAW & SEVERABILITY</h4>
+        <p>This Waiver shall be governed by the laws of the State of Colorado. If any provision is found unenforceable, the remaining provisions shall remain in full force.</p>
+
+        <div class="doc-highlight" style="border-color:var(--red)">By signing below you confirm you are 18 or older, have read this Waiver in full, and understand you are waiving important legal rights.</div>
+      </div>
+      <div class="sign-form" id="doc2-form">
+        <label for="sig2-name">Type your full legal name to sign *</label>
+        <input type="text" id="sig2-name" placeholder="Your full name" />
+        <div class="agree-row">
+          <input type="checkbox" id="sig2-agree" />
+          <div class="agree-text">I have read the Liability Waiver in full, I am 18 years of age or older, and I understand I am waiving important legal rights including the right to sue Sopris Party Rentals for injuries arising from the use of the rental equipment.</div>
+        </div>
+        <button class="btn-sign" id="doc2-btn" onclick="signDocument(2)">Sign Liability Waiver</button>
+      </div>
+    </div>
+
+    <!-- Final submit -->
+    <div class="final-submit-wrap" id="final-submit" style="display:none">
+      <h3>All Documents Signed</h3>
+      <p>Both documents have been signed. Click below to submit your signatures and complete the process.</p>
+      <button class="btn-sign green" onclick="submitAllSignatures()">Submit Signatures & Complete</button>
+    </div>
+
+  </div>
+
+  <!-- Success -->
+  <div id="success-state" style="display:none">
+    <div class="success-wrap">
+      <div class="check">✓</div>
+      <h2>All Done!</h2>
+      <p>Your Rental Agreement and Liability Waiver have been signed and submitted successfully. We look forward to seeing you at your event!</p>
+      <p style="margin-top:1rem">Questions? Contact us at <a href="mailto:taylor@soprispartyrentals.com" style="color:var(--blue)">taylor@soprispartyrentals.com</a> or 970-379-2945.</p>
+      <p style="margin-top:1.5rem;font-size:.85rem;color:var(--gray)">Sopris Party Rentals · Roaring Fork Valley, Colorado</p>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, updateDoc, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCosw2zO30uygcPEbMNV-_pK4Ay1irQ8nA",
+    authDomain:        "sopris-rentals.firebaseapp.com",
+    projectId:         "sopris-rentals",
+    storageBucket:     "sopris-rentals.firebasestorage.app",
+    messagingSenderId: "901315229389",
+    appId:             "1:901315229389:web:c86a72026a3dac024f1b84",
+    measurementId:     "G-PNJ8B02H1K"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // Get booking ID from URL
+  const params     = new URLSearchParams(window.location.search);
+  const bookingId  = params.get('id');
+
+  let bookingData  = null;
+  let sig1Complete = false;
+  let sig2Complete = false;
+
+  function formatDate(ds) {
+    if(!ds) return '—';
+    const [y,m,d] = ds.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
+  }
+
+  async function init() {
+    if(!bookingId) { showError(); return; }
+    try {
+      const snap = await getDoc(doc(db, "bookings", bookingId));
+      if(!snap.exists()) { showError(); return; }
+      bookingData = { id: snap.id, ...snap.data() };
+
+      // Check if already signed
+      if(bookingData.contractSigned && bookingData.waiverSigned) {
+        showAlreadySigned();
+        return;
+      }
+
+      showSigningFlow();
+    } catch(e) {
+      console.error(e);
+      showError();
+    }
+  }
+
+  function showError() {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('error-state').style.display = 'block';
+  }
+
+  function showAlreadySigned() {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('signed-state').style.display = 'block';
+    const b = bookingData;
+    document.getElementById('booking-info-signed').innerHTML = `
+      <div class="booking-field"><label>Name</label><p>${b.firstName} ${b.lastName}</p></div>
+      <div class="booking-field"><label>Bounce House</label><p>${b.house||'—'}</p></div>
+      <div class="booking-field"><label>Date</label><p>${formatDate(b.date)}</p></div>
+      <div class="booking-field"><label>Start Time</label><p>${b.startTime||'—'}</p></div>
+    `;
+  }
+
+  function showSigningFlow() {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('signing-state').style.display = 'block';
+    const b = bookingData;
+    document.getElementById('booking-card').innerHTML = `
+      <div class="booking-field"><label>Name</label><p>${b.firstName} ${b.lastName}</p></div>
+      <div class="booking-field"><label>Bounce House</label><p>${b.house||'—'}</p></div>
+      <div class="booking-field"><label>Date</label><p>${formatDate(b.date)}</p></div>
+      <div class="booking-field"><label>Start Time</label><p>${b.startTime||'—'}</p></div>
+      <div class="booking-field"><label>Duration</label><p>${b.duration||'—'}</p></div>
+      <div class="booking-field"><label>Total</label><p>$${b.totalPrice||'—'}</p></div>
+    `;
+  }
+
+  window.toggleDoc = function(id, header) {
+    const body = document.getElementById(id);
+    const toggle = header.querySelector('.doc-toggle');
+    if(body.style.display === 'none') {
+      body.style.display = 'block';
+      toggle.textContent = 'Hide Document ▲';
+    } else {
+      body.style.display = 'none';
+      toggle.textContent = 'Read Document ▼';
+    }
+  };
+
+  window.signDocument = function(num) {
+    const nameEl  = document.getElementById(`sig${num}-name`);
+    const agreeEl = document.getElementById(`sig${num}-agree`);
+    const btn     = document.getElementById(`doc${num}-btn`);
+
+    if(!nameEl.value.trim()) { nameEl.style.borderColor = '#DC2626'; nameEl.focus(); return; }
+    if(!agreeEl.checked) { agreeEl.style.outline = '2px solid #DC2626'; return; }
+
+    // Mark as signed visually
+    btn.textContent = 'Signed ✓';
+    btn.disabled = true;
+    btn.style.background = '#16A34A';
+    nameEl.disabled = true;
+    agreeEl.disabled = true;
+
+    const titleEl = document.getElementById(`doc${num}-title`);
+    titleEl.innerHTML = `<span style="color:var(--green)">✓</span> ${num===1?'Rental Agreement':'Liability Waiver'} <span class="doc-signed-badge">Signed</span>`;
+
+    if(num === 1) {
+      sig1Complete = true;
+      window._sig1Name = nameEl.value.trim();
+      // Unlock doc 2
+      const doc2 = document.getElementById('doc2-section');
+      doc2.style.opacity = '1';
+      doc2.style.pointerEvents = 'auto';
+      // Update progress
+      document.getElementById('step1-indicator').className = 'progress-step done';
+      document.getElementById('step1-indicator').querySelector('.progress-num').textContent = '✓';
+      document.getElementById('line1').classList.add('done');
+      document.getElementById('step2-indicator').className = 'progress-step active';
+      document.getElementById('step2-indicator').querySelector('.progress-num').textContent = '2';
+      // Scroll to doc2
+      setTimeout(() => doc2.scrollIntoView({behavior:'smooth', block:'start'}), 300);
+    }
+
+    if(num === 2) {
+      sig2Complete = true;
+      window._sig2Name = nameEl.value.trim();
+      // Update progress
+      document.getElementById('step2-indicator').className = 'progress-step done';
+      document.getElementById('step2-indicator').querySelector('.progress-num').textContent = '✓';
+      document.getElementById('line2').classList.add('done');
+      document.getElementById('step3-indicator').className = 'progress-step active';
+      // Show final submit
+      document.getElementById('final-submit').style.display = 'block';
+      setTimeout(() => document.getElementById('final-submit').scrollIntoView({behavior:'smooth'}), 300);
+    }
+  };
+
+  window.submitAllSignatures = async function() {
+    const btn = document.querySelector('#final-submit .btn-sign');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+    try {
+      await updateDoc(doc(db, "bookings", bookingId), {
+        contractSigned:      true,
+        contractSignedName:  window._sig1Name,
+        contractSignedAt:    serverTimestamp(),
+        waiverSigned:        true,
+        waiverSignedName:    window._sig2Name,
+        waiverSignedAt:      serverTimestamp(),
+      });
+      document.getElementById('signing-state').style.display = 'none';
+      document.getElementById('success-state').style.display = 'block';
+      window.scrollTo({top:0, behavior:'smooth'});
+    } catch(e) {
+      console.error(e);
+      btn.disabled = false;
+      btn.textContent = 'Submit Signatures & Complete';
+      alert('Something went wrong. Please try again or contact us at taylor@soprispartyrentals.com');
+    }
+  };
+
+  init();
+</script>
+</body>
+</html>
