@@ -409,27 +409,54 @@
     let html = '';
     for(let h = SLOT_START; h <= SLOT_END; h++) {
       const label = hToLabel(h);
-      const isBuffer  = rendered.some(r => h >= r.bufStart    && h < r.rentalStart || h >= r.rentalEnd && h < r.bufEnd);
-      const isRental  = rendered.some(r => h >= r.rentalStart && h < r.rentalEnd);
       const isSetup   = rendered.some(r => h >= r.bufStart    && h < r.rentalStart);
       const isBreakdn = rendered.some(r => h >= r.rentalEnd   && h < r.bufEnd);
+      const isRentalStart = rendered.some(r => Math.floor(r.rentalStart) === h);
+      const isRentalSpan  = rendered.some(r => h > r.rentalStart && h < r.rentalEnd);
 
-      // Slot styling
+      // Find which booking this row belongs to (for color)
+      const spanBooking = rendered.find(r => h > r.rentalStart && h < r.rentalEnd);
+
       let trackStyle = '';
       let trackContent = '';
-      if(isSetup)   { trackStyle = 'background:rgba(42,123,191,.08);border-left-color:#93C5FD;'; trackContent = `<span style="font-size:.72rem;color:#2A7BBF;font-weight:600;">Setup / Travel</span>`; }
-      if(isRental)  { trackStyle = ''; } // event block handles it
-      if(isBreakdn) { trackStyle = 'background:rgba(100,116,139,.08);border-left-color:#94A3B8;'; trackContent = `<span style="font-size:.72rem;color:#64748B;font-weight:600;">Breakdown / Travel</span>`; }
 
-      // Render event block at rental start hour
+      if(isSetup) {
+        trackStyle = 'background:rgba(42,123,191,.08);border-left:3px solid #93C5FD;';
+        trackContent = `<span style="font-size:.72rem;color:#2A7BBF;font-weight:600;">Setup / Travel</span>`;
+      }
+      if(isBreakdn) {
+        trackStyle = 'background:rgba(100,116,139,.08);border-left:3px solid #94A3B8;';
+        trackContent = `<span style="font-size:.72rem;color:#64748B;font-weight:600;">Breakdown / Travel</span>`;
+      }
+
+      // Continuation row — color matches the booking status
+      if(isRentalSpan && spanBooking) {
+        const statusColors = {
+          approved: 'rgba(22,163,74,.12)',
+          pending:  'rgba(245,158,11,.12)',
+          declined: 'rgba(220,38,38,.12)',
+          manual:   'rgba(139,92,246,.12)',
+        };
+        const borderColors = {
+          approved: '#16A34A',
+          pending:  '#F59E0B',
+          declined: '#DC2626',
+          manual:   '#8B5CF6',
+        };
+        const st = spanBooking.b.status;
+        trackStyle = `background:${statusColors[st]||'rgba(42,123,191,.1)'};border-left:3px solid ${borderColors[st]||'#2A7BBF'};`;
+        trackContent = ''; // empty — just colored
+      }
+
+      // Render full event block only at rental start row
       let eventHtml = '';
       rendered.forEach(({b, rentalStart, rentalEnd, bufStart, bufEnd}) => {
         if(Math.floor(rentalStart) === h) {
-          const endLabel = hToLabel(rentalEnd);
+          const endLabel     = hToLabel(rentalEnd);
           const bufStartLabel = hToLabel(bufStart);
-          const bufEndLabel = hToLabel(bufEnd);
+          const bufEndLabel   = hToLabel(bufEnd);
           eventHtml += `
-            <div class="timeline-event ${b.status}" onclick='openDetailModal(${JSON.stringify(b).replace(/'/g,"&#39;")})' style="cursor:pointer;margin-bottom:.35rem">
+            <div class="timeline-event ${b.status}" onclick='openDetailModal(${JSON.stringify(b).replace(/'/g,"&#39;")})' style="cursor:pointer">
               <div class="timeline-event-name">${b.firstName} ${b.lastName}</div>
               <div class="timeline-event-detail">${b.house}</div>
               <div class="timeline-event-detail" style="margin-top:.3rem">
@@ -442,7 +469,6 @@
         }
       });
 
-      // Show label only for visible hours (9am–8pm for aesthetics, 8am and 9pm as buffer)
       const isEdgeBuffer = h === SLOT_START || h === SLOT_END;
       const rowLabel = isEdgeBuffer
         ? `<div class="timeline-label" style="color:#CBD5E1;font-size:.7rem">${label}</div>`
