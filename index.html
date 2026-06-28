@@ -72,9 +72,8 @@
  .section-title { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 700; color: var(--charcoal); line-height: 1.2; max-width: 560px; margin-bottom: 1rem; }
  .section-sub { color: var(--gray); font-size: 1rem; line-height: 1.7; max-width: 540px; margin-bottom: 3rem; }
 
- /* Logo in products section */
- .logo-band-img { width: min(380px, 75vw); height: auto; filter: drop-shadow(0 6px 24px rgba(30,42,58,.13)); transition: transform .3s; }
- .logo-band-img:hover { transform: scale(1.03); }
+ /* Logo in hero */
+ .hero-logo { width: min(360px, 70vw); height: auto; filter: drop-shadow(0 8px 32px rgba(0,0,0,.25)); margin-bottom: 1.5rem; position: relative; z-index: 1; }
 
  /* Products */
  #products { background: var(--white); }
@@ -308,6 +307,7 @@
 
 <!-- Hero -->
 <section id="home">
+ <img src="logo.png" alt="Sopris Party Rentals Logo" class="hero-logo" />
  <p class="hero-eyebrow"> Roaring Fork Valley, Colorado</p>
  <h1 class="hero-title">Jump Into the<br /><em>Fun</em> This Summer</h1>
  <p class="hero-sub">Sopris Party Rentals brings the bounce to your backyard. Family-owned, locally rooted, and ready to make your next celebration unforgettable.</p>
@@ -334,9 +334,6 @@
 
 <!-- Products -->
 <section id="products">
- <div style="display:flex;justify-content:center;margin-bottom:2.5rem;">
-   <img src="logo.png" alt="Sopris Party Rentals Logo" class="logo-band-img" />
- </div>
  <p class="section-eyebrow">Our Rentals</p>
  <h2 class="section-title">Bounce Houses for Every Celebration</h2>
  <p class="section-sub">Every unit is cleaned and sanitized before each rental. Delivery, setup, and takedown are always included.</p>
